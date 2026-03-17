@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eid Mubarak</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body, html { height: 100%; overflow-x: hidden; }
+
+  #intro {
+    position: fixed; inset: 0;
+    background: #060f0c;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 100;
+    transition: opacity 0.9s ease;
+  }
+  #intro.fade-out { opacity: 0; pointer-events: none; }
+
+  #main {
+    min-height: 100vh;
+    background: linear-gradient(160deg, #050e0b 0%, #0d2e22 40%, #1a5c42 100%);
+    color: #e8f5ef;
+    font-family: Georgia, 'Times New Roman', serif;
+    opacity: 0;
+    transition: opacity 1.2s ease 0.3s;
+  }
+  #main.visible { opacity: 1; }
+
+  canvas#stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  canvas#lanterns { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
+  canvas#cursor-trail { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
+
+  .content { position: relative; z-index: 3; }
+
+  .header { text-align: center; padding: 60px 20px 20px; }
+  .header h1 {
+    font-size: clamp(2.2rem, 8vw, 4rem);
+    font-weight: normal; letter-spacing: 0.04em;
+    color: #d4f0e2;
+    text-shadow: 0 0 40px rgba(100,220,160,0.25);
+  }
+  .header .sub {
+    font-size: 0.95rem; color: #6aab8a; margin-top: 8px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    font-family: Arial, sans-serif;
+  }
+  .divider {
+    width: 60px; height: 1px;
+    background: linear-gradient(90deg, transparent, #3d9e6e, transparent);
+    margin: 18px auto;
+  }
+
+  .letter {
+    background: rgba(10,40,28,0.55);
+    border: 1px solid rgba(80,180,120,0.2);
+    margin: 0 auto 28px; padding: 32px 36px;
+    max-width: 680px; width: calc(100% - 40px);
+    border-radius: 2px; line-height: 1.8;
+    font-size: clamp(15px, 2.2vw, 17px);
+    color: #c9e8d8; position: relative; overflow: hidden;
+  }
+  .letter::before {
+    content: ''; position: absolute; top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: linear-gradient(180deg, transparent, #2d9e6e 30%, #2d9e6e 70%, transparent);
+  }
+  .letter p { margin-bottom: 1.1em; }
+  .letter p:last-child { margin-bottom: 0; }
+  .letter .salutation { font-style: italic; color: #8dcfae; }
+  .letter .sign { font-style: italic; color: #8dcfae; margin-top: 1.4em; }
+
+  /* MOON REVEAL */
+  .moon-section {
+    max-width: 680px; width: calc(100% - 40px);
+    margin: 0 auto 50px; text-align: center;
+  }
+  .moon-hint {
+    font-family: Arial, sans-serif; font-size: 0.78rem;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: #4a8a6a; margin-bottom: 28px; transition: opacity 0.5s;
+  }
+  .moon-hint.hidden { opacity: 0; }
+  .moon-tap { cursor: pointer; display: inline-block; transition: transform 0.3s ease; }
+  .moon-tap:hover { transform: scale(1.06); }
+  .moon-tap svg { display: block; }
+  .moon-glow { animation: moonPulse 3s ease-in-out infinite; }
+  @keyframes moonPulse { 0%,100%{opacity:0.15} 50%{opacity:0.35} }
+  .reveal-wrap {
+    max-height: 0; overflow: hidden;
+    transition: max-height 1.2s cubic-bezier(0.16,1,0.3,1), opacity 0.8s ease;
+    opacity: 0; margin-top: 0;
+  }
+  .reveal-wrap.open { max-height: 600px; opacity: 1; margin-top: 32px; }
+  .reveal-card {
+    background: rgba(8,30,20,0.75);
+    border: 1px solid rgba(100,200,140,0.3);
+    border-radius: 2px; padding: 32px 36px;
+    text-align: left; position: relative; overflow: hidden;
+  }
+  .reveal-card::before {
+    content: ''; position: absolute; top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: linear-gradient(180deg, transparent, #c8a96e 30%, #c8a96e 70%, transparent);
+  }
+  .reveal-card::after {
+    content: '"'; position: absolute; top: -10px; right: 20px;
+    font-size: 8rem; color: rgba(180,150,80,0.08);
+    font-family: Georgia, serif; line-height: 1; pointer-events: none;
+  }
+  .reveal-card p {
+    font-size: clamp(15px, 2.2vw, 17px); line-height: 1.85;
+    color: #d4c49a; margin-bottom: 1.1em; font-style: italic;
+  }
+  .reveal-card p:last-child { margin-bottom: 0; color: #a89060; }
+
+  /* WISH SECTION */
+  .wish-section {
+    max-width: 680px; width: calc(100% - 40px);
+    margin: 0 auto 70px; text-align: center;
+  }
+  .wish-section h2 {
+    font-weight: normal; font-size: 1.1rem;
+    color: #6aab8a; letter-spacing: 0.12em;
+    text-transform: uppercase; font-family: Arial, sans-serif;
+    margin-bottom: 18px;
+  }
+  .wish-input-row { display: flex; gap: 10px; align-items: stretch; }
+  .wish-input {
+    flex: 1; background: rgba(10,40,28,0.6);
+    border: 1px solid rgba(80,180,120,0.25);
+    border-radius: 2px; padding: 12px 16px;
+    color: #c9e8d8; font-family: Georgia, serif;
+    font-size: 15px; outline: none; transition: border-color 0.3s;
+  }
+  .wish-input::placeholder { color: #3d6e52; }
+  .wish-input:focus { border-color: rgba(80,180,120,0.5); }
+  .wish-btn {
+    background: rgba(45,158,110,0.2);
+    border: 1px solid rgba(80,180,120,0.35);
+    border-radius: 2px; padding: 12px 20px;
+    color: #8dcfae; font-family: Arial, sans-serif;
+    font-size: 0.8rem; letter-spacing: 0.12em;
+    text-transform: uppercase; cursor: pointer;
+    transition: background 0.2s, transform 0.15s; white-space: nowrap;
+  }
+  .wish-btn:hover { background: rgba(45,158,110,0.35); }
+  .wish-btn:active { transform: scale(0.97); }
+  .wishes-floated {
+    margin-top: 14px; font-family: Arial, sans-serif;
+    font-size: 0.78rem; color: #3d6e52;
+    letter-spacing: 0.08em; min-height: 20px;
+  }
+
+  /* INTRO */
+  #moon-svg-intro { width: min(240px, 60vw); }
+  #moon-group-intro {
+    animation: moonRise 1.6s cubic-bezier(0.16,1,0.3,1) forwards;
+    transform-origin: center;
+  }
+  @keyframes moonRise {
+    0% { transform: translateY(60px) scale(0.7); opacity: 0; }
+    100% { transform: translateY(0px) scale(1); opacity: 1; }
+  }
+  #intro-glow { animation: pulseGlow 2.5s ease-in-out infinite; }
+  @keyframes pulseGlow { 0%,100%{opacity:0.15} 50%{opacity:0.35} }
+  #stars-intro { animation: twinkleIn 1.8s ease forwards; opacity: 0; }
+  @keyframes twinkleIn { 0%{opacity:0} 60%{opacity:0} 100%{opacity:1} }
+  .moon-label-intro {
+    margin-top: 24px; color: #8dcfae;
+    font-family: Arial, sans-serif; font-size: 0.78rem;
+    letter-spacing: 0.25em; text-transform: uppercase;
+    animation: fadeInLabel 2s ease forwards; opacity: 0;
+  }
+  @keyframes fadeInLabel { 0%,50%{opacity:0} 100%{opacity:0.7} }
+</style>
+</head>
+<body>
+
+<div id="intro">
+  <svg id="moon-svg-intro" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="mgI" cx="42%" cy="42%" r="55%">
+        <stop offset="0%" stop-color="#d4f0e2"/>
+        <stop offset="60%" stop-color="#a8d8be"/>
+        <stop offset="100%" stop-color="#6aab8a"/>
+      </radialGradient>
+      <radialGradient id="ggI" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#3d9e6e" stop-opacity="0.4"/>
+        <stop offset="100%" stop-color="#3d9e6e" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <circle cx="100" cy="100" r="85" fill="url(#ggI)"/>
+    <circle id="intro-glow" cx="100" cy="100" r="80" fill="none" stroke="#3d9e6e" stroke-width="0.5" opacity="0.2"/>
+    <g id="moon-group-intro">
+      <path d="M 100 28 A 72 72 0 1 1 100 172 A 52 62 0 1 0 100 28 Z" fill="url(#mgI)"/>
+      <path d="M 100 28 A 72 72 0 1 1 100 172 A 52 62 0 1 0 100 28 Z" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
+    </g>
+    <g id="stars-intro">
+      <polygon points="148,48 150,43 152,48 157,48 153,51 155,56 150,53 145,56 147,51 143,48" fill="#d4f0e2" opacity="0.9"/>
+      <circle cx="162" cy="72" r="1.8" fill="#a8d8be" opacity="0.8"/>
+      <circle cx="170" cy="58" r="1.2" fill="#d4f0e2" opacity="0.6"/>
+      <circle cx="155" cy="38" r="1" fill="#d4f0e2" opacity="0.5"/>
+    </g>
+  </svg>
+  <div class="moon-label-intro">Eid Mubarak</div>
+</div>
+
+<div id="main">
+  <canvas id="stars"></canvas>
+  <canvas id="lanterns"></canvas>
+  <canvas id="cursor-trail"></canvas>
+
+  <div class="content">
+    <div class="header">
+      <h1>Eid Mubarak</h1>
+      <div class="divider"></div>
+      <p class="sub">End of Ramadan &nbsp;·&nbsp; A time of joy</p>
+    </div>
+
+    <div class="letter">
+      <p class="salutation">To someone very special,</p>
+      <p>As Ramadan comes to an end, I just want to take a moment to tell you how much you mean to me. This past month has been a time of reflection, patience, and growth — and somehow, in the middle of it all, I found myself thinking about you more than usual.</p>
+      <p>I hope your days were filled with peace, your prayers were heard, and your heart feels lighter now. You deserve happiness, not just today but always. I may not always say it, but I truly appreciate your presence, your kindness, and the way you exist in this world.</p>
+      <p>Eid is a time of joy, and I hope yours is full of smiles, warmth, and moments that you'll cherish. No matter where life takes us, I'll always wish the best for you.</p>
+      <p class="sign">Eid Mubarak 🌙<br><br>— Someone who cares about you</p>
+    </div>
+
+    <div class="moon-section">
+      <p class="moon-hint" id="hint">— there is one more thing —</p>
+      <div class="moon-tap" id="moonTap" title="tap to reveal">
+        <svg width="110" height="110" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="mgT" cx="42%" cy="42%" r="55%">
+              <stop offset="0%" stop-color="#d4c49a"/>
+              <stop offset="60%" stop-color="#b8a070"/>
+              <stop offset="100%" stop-color="#8a7040"/>
+            </radialGradient>
+            <radialGradient id="ggT" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#c8a96e" stop-opacity="0.35"/>
+              <stop offset="100%" stop-color="#c8a96e" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <circle cx="55" cy="55" r="48" fill="url(#ggT)"/>
+          <circle class="moon-glow" cx="55" cy="55" r="44" fill="none" stroke="#c8a96e" stroke-width="0.6" opacity="0.25"/>
+          <path d="M 55 14 A 41 41 0 1 1 55 96 A 30 36 0 1 0 55 14 Z" fill="url(#mgT)"/>
+          <path d="M 55 14 A 41 41 0 1 1 55 96 A 30 36 0 1 0 55 14 Z" fill="none" stroke="rgba(255,240,200,0.15)" stroke-width="0.6"/>
+          <polygon points="80,26 81.5,21.5 83,26 87.5,26 84,28.5 85.5,33 81.5,30.5 77.5,33 79,28.5 75.5,26" fill="#d4c49a" opacity="0.85"/>
+          <circle cx="88" cy="40" r="1.2" fill="#d4c49a" opacity="0.6"/>
+          <circle cx="84" cy="18" r="0.9" fill="#d4c49a" opacity="0.5"/>
+        </svg>
+      </div>
+      <div class="reveal-wrap" id="revealWrap">
+        <div class="reveal-card">
+          <p>I don't say this enough, and maybe I never will out loud — but you have a way of making ordinary moments feel like they matter. The way you laugh, the way you care, the way you show up — it stays with me longer than you know.</p>
+          <p>This Ramadan, in the quiet hours, you were the thought I kept coming back to. Not out of longing alone, but out of gratitude — that someone like you exists, and that somehow, I get to know you.</p>
+          <p>If I could give you anything tonight, it would be this: the certainty that you are loved. Genuinely, quietly, deeply.</p>
+          <p>— Always yours, in whatever way the world allows 🌙</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="wish-section">
+      <h2>Send a wish into the sky</h2>
+      <div class="wish-input-row">
+        <input class="wish-input" id="wishInput" type="text" maxlength="60" placeholder="Write your wish and release it..."/>
+        <button class="wish-btn" id="wishBtn">Release ✦</button>
+      </div>
+      <div class="wishes-floated" id="wishStatus"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  /* INTRO */
+  const intro = document.getElementById('intro');
+  const main  = document.getElementById('main');
+  setTimeout(() => {
+    intro.classList.add('fade-out');
+    main.classList.add('visible');
+    setTimeout(() => { intro.style.display = 'none'; }, 1000);
+  }, 2800);
+
+  /* TWINKLING STARS */
+  const sc = document.getElementById('stars');
+  const sctx = sc.getContext('2d');
+  let W, H, stars = [];
+  function resizeSc(){ W = sc.width = window.innerWidth; H = sc.height = window.innerHeight; }
+  function initStars(){
+    stars = [];
+    const n = Math.floor(W*H/7000);
+    for(let i=0;i<n;i++) stars.push({
+      x:Math.random()*W, y:Math.random()*H,
+      r:Math.random()*1.2+0.2,
+      alpha:Math.random()*0.55+0.1,
+      speed:Math.random()*0.014+0.004,
+      phase:Math.random()*Math.PI*2
+    });
+  }
+  let st=0;
+  function drawStars(){
+    sctx.clearRect(0,0,W,H); st+=0.016;
+    stars.forEach(s=>{
+      const a=s.alpha*(0.6+0.4*Math.sin(st*s.speed*60+s.phase));
+      sctx.beginPath(); sctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      sctx.fillStyle=`rgba(180,240,210,${a})`; sctx.fill();
+    });
+  }
+  resizeSc(); initStars();
+  window.addEventListener('resize',()=>{resizeSc();initStars();});
+
+  /* LANTERNS */
+  const lc = document.getElementById('lanterns');
+  const lctx = lc.getContext('2d');
+  let LW, LH, lanterns=[];
+  function resizeLc(){ LW=lc.width=window.innerWidth; LH=lc.height=window.innerHeight; }
+  resizeLc();
+  window.addEventListener('resize', resizeLc);
+  function spawnLantern(){
+    lanterns.push({
+      x:Math.random()*LW, y:LH+20,
+      size:Math.random()*10+14,
+      speed:Math.random()*0.4+0.3,
+      drift:(Math.random()-0.5)*0.4,
+      alpha:Math.random()*0.35+0.25,
+      hue:Math.random()*40+20,
+      flicker:Math.random()*Math.PI*2,
+      flickerSpeed:Math.random()*0.06+0.03
+    });
+  }
+  setInterval(spawnLantern, 1800);
+  spawnLantern(); spawnLantern();
+  function drawLanterns(){
+    lctx.clearRect(0,0,LW,LH);
+    lanterns=lanterns.filter(l=>l.y>-60);
+    lanterns.forEach(l=>{
+      l.y-=l.speed; l.x+=l.drift; l.flicker+=l.flickerSpeed;
+      const flk=0.85+0.15*Math.sin(l.flicker);
+      const a=l.alpha*flk; const s=l.size;
+      lctx.save(); lctx.translate(l.x,l.y);
+      lctx.beginPath();
+      lctx.roundRect(-s*0.38,-s*0.5,s*0.76,s,3);
+      lctx.fillStyle=`hsla(${l.hue},80%,68%,${a})`; lctx.fill();
+      const grd=lctx.createRadialGradient(0,0,0,0,0,s*1.3);
+      grd.addColorStop(0,`hsla(${l.hue},90%,75%,${a*0.45})`);
+      grd.addColorStop(1,`hsla(${l.hue},80%,60%,0)`);
+      lctx.beginPath(); lctx.arc(0,0,s*1.3,0,Math.PI*2);
+      lctx.fillStyle=grd; lctx.fill();
+      lctx.beginPath(); lctx.moveTo(0,-s*0.5); lctx.lineTo(0,-s*0.7);
+      lctx.strokeStyle=`hsla(${l.hue},60%,70%,${a*0.7})`; lctx.lineWidth=0.8; lctx.stroke();
+      lctx.restore();
+    });
+  }
+
+  /* WISH LANTERNS + CURSOR TRAIL */
+  let wishLanterns=[];
+  const wc=document.getElementById('cursor-trail');
+  const wctx=wc.getContext('2d');
+  let WW,WH;
+  function resizeWc(){ WW=wc.width=window.innerWidth; WH=wc.height=window.innerHeight; }
+  resizeWc();
+  window.addEventListener('resize',resizeWc);
+  let trail=[];
+  window.addEventListener('mousemove',e=>{
+    for(let i=0;i<2;i++) trail.push({
+      x:e.clientX+(Math.random()-0.5)*8, y:e.clientY+(Math.random()-0.5)*8,
+      r:Math.random()*2.5+1, alpha:0.7,
+      decay:Math.random()*0.03+0.02, hue:Math.random()<0.5?150:45
+    });
+    if(trail.length>120) trail.splice(0,trail.length-120);
+  });
+  window.addEventListener('touchmove',e=>{
+    const t=e.touches[0];
+    for(let i=0;i<2;i++) trail.push({
+      x:t.clientX+(Math.random()-0.5)*8, y:t.clientY+(Math.random()-0.5)*8,
+      r:Math.random()*2.5+1, alpha:0.7,
+      decay:Math.random()*0.03+0.02, hue:Math.random()<0.5?150:45
+    });
+  },{passive:true});
+  function drawTrail(){
+    wctx.clearRect(0,0,WW,WH);
+    wishLanterns=wishLanterns.filter(l=>l.alpha>0.01&&l.y>-80);
+    wishLanterns.forEach(l=>{
+      l.y-=l.speed; l.x+=l.drift; l.alpha-=0.003; l.flicker+=0.05;
+      const flk=0.9+0.1*Math.sin(l.flicker);
+      const a=l.alpha*flk; const s=l.size;
+      wctx.save(); wctx.translate(l.x,l.y);
+      wctx.beginPath();
+      wctx.roundRect(-s*0.38,-s*0.5,s*0.76,s,3);
+      wctx.fillStyle=`hsla(${l.hue},80%,72%,${a})`; wctx.fill();
+      const grd=wctx.createRadialGradient(0,0,0,0,0,s*1.4);
+      grd.addColorStop(0,`hsla(${l.hue},90%,80%,${a*0.5})`);
+      grd.addColorStop(1,`hsla(${l.hue},80%,60%,0)`);
+      wctx.beginPath(); wctx.arc(0,0,s*1.4,0,Math.PI*2);
+      wctx.fillStyle=grd; wctx.fill();
+      if(l.text&&a>0.08){
+        wctx.font=`${Math.max(9,s*0.7)}px Georgia`;
+        wctx.fillStyle=`rgba(255,245,220,${Math.min(a*1.5,0.9)})`;
+        wctx.textAlign='center'; wctx.textBaseline='middle';
+        const maxW=s*3.5;
+        wctx.save();
+        wctx.rect(-maxW/2-2,-s*0.35,maxW+4,s*0.7);
+        wctx.clip();
+        wctx.fillText(l.text,0,0,maxW);
+        wctx.restore();
+      }
+      wctx.restore();
+    });
+    trail=trail.filter(p=>p.alpha>0.01);
+    trail.forEach(p=>{
+      p.alpha-=p.decay;
+      wctx.beginPath(); wctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      wctx.fillStyle=`hsla(${p.hue},70%,70%,${p.alpha})`; wctx.fill();
+    });
+  }
+
+  /* MAIN LOOP */
+  function loop(){ drawStars(); drawLanterns(); drawTrail(); requestAnimationFrame(loop); }
+  loop();
+
+  /* MOON TAP */
+  const moonTap=document.getElementById('moonTap');
+  const revealWrap=document.getElementById('revealWrap');
+  const hintEl=document.getElementById('hint');
+  let opened=false;
+  moonTap.addEventListener('click',()=>{
+    if(opened) return; opened=true;
+    hintEl.classList.add('hidden');
+    moonTap.style.transition='transform 0.6s cubic-bezier(0.34,1.56,0.64,1),opacity 0.5s ease';
+    moonTap.style.transform='scale(1.25) translateY(-6px)';
+    moonTap.style.opacity='0.4';
+    setTimeout(()=>{ moonTap.style.transform='scale(0.6) translateY(-10px)'; moonTap.style.opacity='0'; },400);
+    setTimeout(()=>{ moonTap.style.display='none'; revealWrap.classList.add('open'); },700);
+  });
+
+  /* WISH */
+  const wishInput=document.getElementById('wishInput');
+  const wishBtn=document.getElementById('wishBtn');
+  const wishStatus=document.getElementById('wishStatus');
+  let wishCount=0;
+  function releaseWish(){
+    const txt=wishInput.value.trim();
+    if(!txt) return;
+    wishCount++;
+    const bx=WW/2+(Math.random()-0.5)*120;
+    for(let i=0;i<6;i++) wishLanterns.push({
+      x:bx+(Math.random()-0.5)*80, y:WH-40,
+      size:Math.random()*14+16,
+      speed:Math.random()*0.6+0.5,
+      drift:(Math.random()-0.5)*0.5,
+      alpha:Math.random()*0.4+0.5,
+      hue:Math.random()*50+15,
+      flicker:Math.random()*Math.PI*2,
+      text:i===0?txt:''
+    });
+    wishStatus.textContent=wishCount===1
+      ?'Your wish is rising into the sky ✦'
+      :`${wishCount} wishes released into the night ✦`;
+    wishInput.value='';
+    wishBtn.textContent='Released ✦';
+    wishBtn.style.color='#6aab8a';
+    setTimeout(()=>{ wishBtn.textContent='Release ✦'; wishBtn.style.color=''; },2000);
+  }
+  wishBtn.addEventListener('click',releaseWish);
+  wishInput.addEventListener('keydown',e=>{ if(e.key==='Enter') releaseWish(); });
+})();
+</script>
+
+</body>
+</html>
